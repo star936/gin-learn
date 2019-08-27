@@ -1,0 +1,13 @@
+oauth:
+  github:
+    authorizeUrl: https://github.com/login/oauth/authorize
+    clientID: 97e6fce8aa0571095fc3
+    clientSecrect: 2107fe7b7403d79e2e75f447779c73f8933502a7
+    accessTokenUrl: https://github.com/login/oauth/access_token
+    userInfoUrl: https://api.github.com/user
+  baidu:
+    authorizeUrl: http://openapi.baidu.com/oauth/2.0/authorize
+    clientID: uYIyg2UmFtVy0TDQdSPQRTHr
+    clientSecrect: vd8RhI4Ec4dU8tZjFHOjlMVV1bZZKrvG
+    accessTokenUrl: https://openapi.baidu.com/oauth/2.0/token
+    userInfoUrl: https://openapi.baidu.com/rest/2.0/passport/users/getLoggedInUser
