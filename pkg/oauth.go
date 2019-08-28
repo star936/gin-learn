@@ -1,19 +1,16 @@
 package pkg
 
 import (
-	"encoding/json"
 	"fmt"
 	"gin-learn/config"
-	"io"
-	"io/ioutil"
+	"gin-learn/pkg/utils"
 	"log"
-	"net/http"
 )
 
 type IOauth interface {
-	GetAuthURL()     			string
-	GetAccessToken(code string) string
-	GetUserInfo()    			string
+	GetAuthURL()     				string
+	GetAccessToken(code string) 	string
+	GetUserInfo(accessToken string) string
 }
 
 
@@ -60,16 +57,19 @@ func (o *Oauth)GetAuthURL() string {
 
 func (o *Oauth)GetAccessToken(code string) string {
 	url := fmt.Sprintf("%s?client_id=%s&client_secret=%s&code=%s", o.AccessTokenUrl, o.ClientID, o.ClientSecrect, code)
-	result, err := post(url, nil, nil)
+	result, err := utils.Post(url, nil, nil)
 	if err != nil {
 		fmt.Println(err)
 		log.Fatalf("Get oauth access token failed, err:%v", err)
 		return ""
 	}
-	return result["access_token"].(string)
+	if accessToken, ok := result["access_token"]; ok {
+		return accessToken.(string)
+	}
+	return ""
 }
 
-func (o *Oauth)GetUserInfo() string {
+func (o *Oauth)GetUserInfo(accessToken string) string {
 	return ""
 }
 
@@ -77,12 +77,31 @@ func (gho *GitHubOauth)GetAccessToken(code string) string  {
 	url := fmt.Sprintf("%s?client_id=%s&client_secret=%s&code=%s", gho.AccessTokenUrl, gho.ClientID, gho.ClientSecrect, code)
 	headers := make(map[string]string)
 	headers["accept"] = "application/json"
-	result, err := post(url, nil, headers)
+	result, err := utils.Post(url, nil, headers)
 	if err != nil {
-		log.Fatalf("Get oauth access token failed, err:%v", err)
+		log.Fatalf("Get access token from github failed, err:%v", err)
 		return ""
 	}
-	return result["access_token"].(string)
+	if accessToken, ok := result["access_token"]; ok {
+		return accessToken.(string)
+	}
+	return ""
+}
+
+func (gho *GitHubOauth)GetUserInfo(accessToken string) string {
+	var headers = make(map[string]string)
+	headers["accept"] = "application/json"
+	headers["Authorization"] = "token " + accessToken
+	result, err := utils.Get(gho.UserInfoUrl, headers)
+	if err != nil {
+		fmt.Println(err)
+		log.Fatalf("Get userinfo from github failed, err:%v", err)
+		return ""
+	}
+	if name, ok := result["login"]; ok {
+		return name.(string)
+	}
+	return ""
 }
 
 func (bdo *BaiduOauth)GetAuthURL() string  {
@@ -92,37 +111,31 @@ func (bdo *BaiduOauth)GetAuthURL() string  {
 func (bdo *BaiduOauth)GetAccessToken(code string) string  {
 	url := fmt.Sprintf("%s?grant_type=authorization_code&code=%s&client_id=%s&client_secret=%s&redirect_uri=%s",
 		bdo.AccessTokenUrl, code, bdo.ClientID, bdo.ClientSecrect, bdo.RedirectUrl)
-	result, err := post(url, nil, nil)
+	result, err := utils.Post(url, nil, nil)
 	if err != nil {
 		fmt.Println(err)
-		log.Fatalf("Get oauth access token failed, err:%v", err)
+		log.Fatalf("Get access token from baidu failed, err:%v", err)
 		return ""
 	}
-	return result["access_token"].(string)
+	if accessToken, ok := result["access_token"]; ok {
+		return accessToken.(string)
+	}
+	return ""
 }
 
-func post(url string, body io.Reader, headers map[string]string) (map[string]interface{}, error) {
-	client := http.Client{}
-	request, _ := http.NewRequest("POST", url, body)
-
-	if headers != nil {
-		for key, value := range headers {
-			request.Header.Set(key, value)
-		}
-	}
-	res, err := client.Do(request)
+func (bdo *BaiduOauth)GetUserInfo(accessToken string) string  {
+	url := bdo.UserInfoUrl + "?access_token=" + accessToken
+	result , err :=utils.Post(url, nil, nil)
 	if err != nil {
 		fmt.Println(err)
-		return nil, err
+		log.Fatalf("Get userinfo from baidu failed, err:%v", err)
 	}
-
-	defer res.Body.Close()
-	var result map[string]interface{}
-	var data []byte
-	data, _ = ioutil.ReadAll(res.Body)
-	_ = json.Unmarshal(data, &result)
-	return result, nil
+	if name, ok := result["uname"]; ok {
+		return name.(string)
+	}
+	return ""
 }
+
 
 var GHO IOauth
 var BDO IOauth
